@@ -18,6 +18,8 @@
  */
 package org.jpmml.evaluator;
 
+import java.math.BigDecimal;
+
 import org.dmg.pmml.*;
 
 import com.google.common.math.*;
@@ -425,12 +427,12 @@ public class TypeUtil {
 
 		if(value instanceof Double){
 			return (Double)value;
-		} else
-
-		if((value instanceof Float) || (value instanceof Integer)){
+		} else if((value instanceof Float) || (value instanceof Integer)){
 			Number number = (Number)value;
-
 			return Double.valueOf(number.doubleValue());
+		} else if(value instanceof Long){
+			BigDecimal dBig = BigDecimal.valueOf((Long)value);
+			return Double.valueOf(dBig.doubleValue());
 		}
 
 		throw new TypeCheckException(DataType.DOUBLE, value);
