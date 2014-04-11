@@ -124,153 +124,157 @@ public class OutputUtil {
 					break;
 			} // End switch
 
-			// Perform the requested computation on the mining result
-			switch(resultFeature){
-				case PREDICTED_VALUE:
-					{
-						value = getPredictedValue(value);
-					}
-					break;
-				case PREDICTED_DISPLAY_VALUE:
-					{
-						Target target = modelManager.getTarget(targetField);
-
-						value = getPredictedDisplayValue(value, target);
-					}
-					break;
-				case TRANSFORMED_VALUE:
-				case DECISION:
-					{
-						if(segmentId != null){
-							throw new UnsupportedFeatureException(outputField);
+			try{
+				// Perform the requested computation on the mining result
+				switch(resultFeature){
+					case PREDICTED_VALUE:
+						{
+							value = getPredictedValue(value);
 						}
+						break;
+					case PREDICTED_DISPLAY_VALUE:
+						{
+							Target target = modelManager.getTarget(targetField);
 
-						Expression expression = outputField.getExpression();
-						if(expression == null){
-							throw new InvalidFeatureException(outputField);
+							value = getPredictedDisplayValue(value, target);
 						}
+						break;
+					case TRANSFORMED_VALUE:
+					case DECISION:
+						{
+							if(segmentId != null){
+								throw new UnsupportedFeatureException(outputField);
+							}
 
-						value = FieldValueUtil.getValue(ExpressionUtil.evaluate(expression, context));
-					}
-					break;
-				case PROBABILITY:
-					{
-						value = getProbability(value, outputField);
-					}
-					break;
-				case RESIDUAL:
-					{
-						FieldValue expectedValue = context.getField(targetField);
-						if(expectedValue == null){
-							throw new MissingFieldException(targetField, outputField);
+							Expression expression = outputField.getExpression();
+							if(expression == null){
+								throw new InvalidFeatureException(outputField);
+							}
+
+							value = FieldValueUtil.getValue(ExpressionUtil.evaluate(expression, context));
 						}
+						break;
+					case PROBABILITY:
+						{
+							value = getProbability(value, outputField);
+						}
+						break;
+					case RESIDUAL:
+						{
+							FieldValue expectedValue = context.getField(targetField);
+							if(expectedValue == null){
+								throw new MissingFieldException(targetField, outputField);
+							}
 
-						DataField dataField = modelManager.getDataField(targetField);
+							DataField dataField = modelManager.getDataField(targetField);
 
-						OpType opType = dataField.getOptype();
-						switch(opType){
-							case CONTINUOUS:
-								value = getContinuousResidual(value, expectedValue);
+							OpType opType = dataField.getOptype();
+							switch(opType){
+								case CONTINUOUS:
+									value = getContinuousResidual(value, expectedValue);
+									break;
+								case CATEGORICAL:
+									value = getCategoricalResidual(value, expectedValue);
+									break;
+								default:
+									throw new UnsupportedFeatureException(outputField, opType);
+							}
+						}
+						break;
+					case ENTITY_ID:
+						{
+							// "Result feature entityId returns the id of the winning segment"
+							if(checkSegmentEntityId(segmentPredictions, outputField)){
+								SegmentResultMap segmentResult = (SegmentResultMap)segmentPredictions;
+
+								value = segmentResult.getEntityId();
+
 								break;
-							case CATEGORICAL:
-								value = getCategoricalResidual(value, expectedValue);
-								break;
-							default:
-								throw new UnsupportedFeatureException(outputField, opType);
+							}
+
+							value = getEntityId(value, outputField);
 						}
-					}
-					break;
-				case ENTITY_ID:
-					{
-						// "Result feature entityId returns the id of the winning segment"
-						if(checkSegmentEntityId(segmentPredictions, outputField)){
-							SegmentResultMap segmentResult = (SegmentResultMap)segmentPredictions;
-
-							value = segmentResult.getEntityId();
-
-							break;
+						break;
+					case CLUSTER_ID:
+						{
+							value = getClusterId(value);
 						}
-
-						value = getEntityId(value, outputField);
-					}
-					break;
-				case CLUSTER_ID:
-					{
-						value = getClusterId(value);
-					}
-					break;
-				case AFFINITY:
-				case ENTITY_AFFINITY:
-					{
-						value = getAffinity(value, outputField);
-					}
-					break;
-				case CLUSTER_AFFINITY:
-					{
-						value = getClusterAffinity(value);
-					}
-					break;
-				case RULE_VALUE:
-					{
-						value = getRuleValue(value, outputField);
-					}
-					break;
-				case REASON_CODE:
-					{
-						value = getReasonCode(value, outputField);
-					}
-					break;
-				case ANTECEDENT:
-					{
-						value = getRuleValue(value, outputField, RuleFeatureType.ANTECEDENT);
-					}
-					break;
-				case CONSEQUENT:
-					{
-						value = getRuleValue(value, outputField, RuleFeatureType.CONSEQUENT);
-					}
-					break;
-				case RULE:
-					{
-						value = getRuleValue(value, outputField, RuleFeatureType.RULE);
-					}
-					break;
-				case RULE_ID:
-					{
-						value = getRuleValue(value, outputField, RuleFeatureType.RULE_ID);
-					}
-					break;
-				case CONFIDENCE:
-					{
-						value = getRuleValue(value, outputField, RuleFeatureType.CONFIDENCE);
-					}
-					break;
-				case SUPPORT:
-					{
-						value = getRuleValue(value, outputField, RuleFeatureType.SUPPORT);
-					}
-					break;
-				case LIFT:
-					{
-						value = getRuleValue(value, outputField, RuleFeatureType.LIFT);
-					}
-					break;
-				case LEVERAGE:
-					{
-						value = getRuleValue(value, outputField, RuleFeatureType.LEVERAGE);
-					}
-					break;
-				case WARNING:
-					{
-						value = context.getWarnings();
-					}
-					break;
-				default:
-					throw new UnsupportedFeatureException(outputField, resultFeature);
-			}
-
-			// The result of one output field becomes available to other other output fields
-			context.declare(outputField.getName(), FieldValueUtil.create(outputField, value));
+						break;
+					case AFFINITY:
+					case ENTITY_AFFINITY:
+						{
+							value = getAffinity(value, outputField);
+						}
+						break;
+					case CLUSTER_AFFINITY:
+						{
+							value = getClusterAffinity(value);
+						}
+						break;
+					case RULE_VALUE:
+						{
+							value = getRuleValue(value, outputField);
+						}
+						break;
+					case REASON_CODE:
+						{
+							value = getReasonCode(value, outputField);
+						}
+						break;
+					case ANTECEDENT:
+						{
+							value = getRuleValue(value, outputField, RuleFeatureType.ANTECEDENT);
+						}
+						break;
+					case CONSEQUENT:
+						{
+							value = getRuleValue(value, outputField, RuleFeatureType.CONSEQUENT);
+						}
+						break;
+					case RULE:
+						{
+							value = getRuleValue(value, outputField, RuleFeatureType.RULE);
+						}
+						break;
+					case RULE_ID:
+						{
+							value = getRuleValue(value, outputField, RuleFeatureType.RULE_ID);
+						}
+						break;
+					case CONFIDENCE:
+						{
+							value = getRuleValue(value, outputField, RuleFeatureType.CONFIDENCE);
+						}
+						break;
+					case SUPPORT:
+						{
+							value = getRuleValue(value, outputField, RuleFeatureType.SUPPORT);
+						}
+						break;
+					case LIFT:
+						{
+							value = getRuleValue(value, outputField, RuleFeatureType.LIFT);
+						}
+						break;
+					case LEVERAGE:
+						{
+							value = getRuleValue(value, outputField, RuleFeatureType.LEVERAGE);
+						}
+						break;
+					case WARNING:
+						{
+							value = context.getWarnings();
+						}
+						break;
+					default:
+						throw new UnsupportedFeatureException(outputField, resultFeature);
+				}
+				// The result of one output field becomes available to other other output fields
+				context.declare(outputField.getName(), FieldValueUtil.create(outputField, value));
+				
+			}catch(Exception e){
+				value = e.getMessage();
+			}				
 
 			result.put(outputField.getName(), value);
 		}
